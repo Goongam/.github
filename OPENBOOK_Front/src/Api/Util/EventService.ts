@@ -1,4 +1,4 @@
-import { getAccessToken } from "./token";
+// import { getAccessToken } from "./token";
 
 export interface Event {
   id: number;
@@ -8,6 +8,7 @@ export interface Event {
   closeDate: string;
   recruitStartDate: string;
   recruitEndDate: string;
+  tags: string[];
 }
 
 export interface EventResponse {
@@ -17,21 +18,23 @@ export interface EventResponse {
   content: Event[];
 }
 
+export type OrderType = "최신순" | "오래된순";
+
 export const fetchEvents = async (
   sliceNumber: number,
-  sortOrder: string,
+  sortOrder: OrderType,
   progress: string
 ): Promise<EventResponse> => {
-  const token = getAccessToken();
+  // const token = getAccessToken();
   const response = await fetch(
     `http://52.79.91.214:8080/events?page=${sliceNumber}&sort=openDate%2C${
       sortOrder === "최신순" ? "DESC" : "ASC"
-    }&progress=${progress}`,
+    }&progress=${progress}&size=10`,
     {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      // headers: {
+      //   Authorization: `Bearer ${token}`,
+      // },
     }
   );
 

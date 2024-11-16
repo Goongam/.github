@@ -3,11 +3,16 @@ import BoothTable from "./BoothTable";
 import EventFormInput from "./EventFormInput";
 
 import { MdDescription, MdStorefront } from "react-icons/md";
-import { MdOutlineDescription } from "react-icons/md";
 import { SlLocationPin } from "react-icons/sl";
+import { HiHashtag } from "react-icons/hi2";
+import { BsCalendarDate } from "react-icons/bs";
+import { BsCalendar2DateFill } from "react-icons/bs";
+
 import { getAccessToken } from "../../Api/Util/token";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import PleaseLogin from "../Login/PleaseLogin";
+
+import DaumPostcode from "react-daum-postcode";
 
 export function getNumbers(maxNumber: number) {
   const NUMBERS = [];
@@ -37,6 +42,7 @@ interface EventData {
   boothRecruitmentEndDate: string;
   layoutType: "ALPHABET" | "NUMBER";
   areaClassifications: AreaData;
+  tags: string[];
 }
 
 //TODO: 부스 배치도 이미지 업로드 3장제한
@@ -53,13 +59,17 @@ export default function AddEventPage() {
     boothRecruitmentEndDate: "",
     layoutType: "ALPHABET",
     areaClassifications: [{ area: "A", maxNumber: 1 }],
+    tags: [],
   });
+  const [inputTag, setInputTag] = useState<string>("");
 
   const ALPHABETS = getAlphabets("Z");
   const NUMBERS = getNumbers(eventDetails.layoutType === "ALPHABET" ? 20 : 100);
 
   const [mainImage, setMainImage] = useState<File>();
   const [layoutImages, setLayoutImages] = useState<File[]>([]);
+
+  const [isAddressOpen, setIsAddressOpen] = useState(false);
 
   const mainImageView = useMemo(() => {
     if (mainImage) {
@@ -71,7 +81,7 @@ export default function AddEventPage() {
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
-
+    console.log(name, value);
     setEventDetails({ ...eventDetails, [name]: value });
   };
 
@@ -116,6 +126,27 @@ export default function AddEventPage() {
     setMaxNumber(e.target.value);
   };
 
+  const onAddTags = () => {
+    if (!inputTag) {
+      return;
+    }
+
+    if (inputTag.length > 15) {
+      return;
+    }
+
+    if (eventDetails.tags.length >= 5) {
+      return;
+    }
+
+    setEventDetails({
+      ...eventDetails,
+      tags: [...eventDetails.tags, inputTag],
+    });
+
+    setInputTag("");
+  };
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
 
@@ -153,6 +184,10 @@ export default function AddEventPage() {
       formData.append("areaMaxNumbers", `${maxNumber}`);
     }
 
+    eventDetails.tags.forEach((tag) => {
+      formData.append("tags", tag);
+    });
+
     fetch("http://52.79.91.214:8080/events", {
       method: "POST",
       body: formData,
@@ -178,7 +213,26 @@ export default function AddEventPage() {
   }
 
   return (
-    <form className="flex min-h-screen justify-center" onSubmit={onSubmit}>
+    <form
+      className="flex min-h-screen justify-center my-10"
+      onSubmit={onSubmit}
+    >
+      {isAddressOpen && (
+        <div
+          className="fixed flex justify-center items-center top-0 w-full h-full bg-black/20"
+          onClick={() => {
+            setIsAddressOpen(false);
+          }}
+        >
+          <DaumPostcode
+            className="max-w-screen-md border shadow-lg"
+            onComplete={(e) => {
+              setEventDetails({ ...eventDetails, location: e.roadAddress });
+              setIsAddressOpen(false);
+            }}
+          ></DaumPostcode>
+        </div>
+      )}
       <div className="w-full max-w-screen-lg h-full p-10">
         <div className="flex flex-col mt-5">
           <span className="bg-blue-400 w-fit p-2 rounded-t text-white font-bold">
@@ -192,13 +246,26 @@ export default function AddEventPage() {
               label="행사명"
               Icon={MdStorefront}
             />
-            <EventFormInput
-              placeholder="장소"
-              onChange={handleChange}
-              name="location"
-              label="장소"
-              Icon={SlLocationPin}
-            />
+            <div className="flex items-center gap-x-2">
+              <EventFormInput
+                placeholder="장소"
+                onChange={handleChange}
+                name="location"
+                label="장소"
+                Icon={SlLocationPin}
+                value={eventDetails.location}
+              />
+              <button
+                type="button"
+                className="mt-7 border shadow-sm rounded-md p-1 w-24"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsAddressOpen(true);
+                }}
+              >
+                주소 찾기
+              </button>
+            </div>
             <EventFormInput
               placeholder="설명"
               onChange={handleChange}
@@ -233,7 +300,7 @@ export default function AddEventPage() {
                 name="openDate"
                 label="행사 시작 날짜"
                 DateInput
-                Icon={MdOutlineDescription}
+                Icon={BsCalendarDate}
               />
               <EventFormInput
                 placeholder="마감날짜"
@@ -241,7 +308,7 @@ export default function AddEventPage() {
                 name="closeDate"
                 label="행사 마감 날짜"
                 DateInput
-                Icon={MdOutlineDescription}
+                Icon={BsCalendar2DateFill}
               />
             </div>
             <div className="flex gap-2 flex-col sm:flex-row">
@@ -251,7 +318,7 @@ export default function AddEventPage() {
                 name="boothRecruitmentStartDate"
                 label="부스 모집 시작 날짜"
                 DateInput
-                Icon={MdOutlineDescription}
+                Icon={BsCalendarDate}
               />
               <EventFormInput
                 placeholder="부스 모집 마감날짜"
@@ -259,8 +326,48 @@ export default function AddEventPage() {
                 name="boothRecruitmentEndDate"
                 label="부스 모집 마감날짜"
                 DateInput
-                Icon={MdOutlineDescription}
+                Icon={BsCalendar2DateFill}
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <EventFormInput
+                placeholder="태그를 입력 후 추가해주세요"
+                onChange={(e) => setInputTag(e.target.value)}
+                name="tags"
+                label="해시태그"
+                Icon={HiHashtag}
+                value={inputTag}
+                labelClassName="mt-[2px]"
+              />
+              <button
+                className="bg-mainBlue rounded-md text-white px-2 py-1 mt-7 border shadow-sm w-24"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onAddTags();
+                }}
+              >
+                추가
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {eventDetails.tags.map((tag) => (
+                <div
+                  className="flex py-1 px-2 rounded-md bg-mainBlue text-white cursor-pointer"
+                  key={tag}
+                  onClick={() => {
+                    const filteredTags = [...eventDetails.tags].filter(
+                      (addedTag) => addedTag !== tag
+                    );
+                    setEventDetails({
+                      ...eventDetails,
+                      tags: filteredTags,
+                    });
+                  }}
+                >
+                  {tag}
+                  <button className="ml-2 text-white/50">x</button>
+                </div>
+              ))}
             </div>
           </div>
         </div>

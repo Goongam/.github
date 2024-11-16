@@ -1,46 +1,95 @@
-import React from "react";
+import noImage from "../../../../images/noimage.png";
+import { useState, useMemo } from "react";
+import ReserveTable from "./ReserveTable";
 
 interface Props {
+  serviceData: {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    imageUrl: string;
+    reservations: ReservationDate[];
+  };
+  isManager: boolean;
+}
+interface ApplyUser {
+  id: string;
   name: string;
-  price: number;
-  volume: string;
-  description: string;
-  imageUrl: string;
+  nickname: string;
+  role: string;
+}
+interface ReservationDate {
+  date: string;
+  times: ReservationTime[];
 }
 
-export default function ServiceInfoCard({
-  name,
-  price,
-  volume,
-  description,
-  imageUrl,
-}: Props) {
+interface ReservationTime {
+  id: number;
+  times: string;
+  status: "EMPTY" | "RESERVED" | string;
+  applyUser?: ApplyUser;
+}
+
+export default function ServiceInfoCard({ serviceData, isManager }: Props) {
+  const [isTableModalOpen, setTableModalOpen] = useState(false);
+
+  const reversedReservations = useMemo(
+    () => [...serviceData.reservations].reverse(),
+    [serviceData.reservations]
+  );
+
   return (
-    <div className="border p-4 rounded-lg flex shadow-md relative">
-      <img
-        src={imageUrl}
-        alt={name}
-        className="w-24 h-24 object-cover rounded-md"
-      />
-      <div className="flex flex-col justify-between flex-grow pl-4">
-        <div className="flex justify-between items-start">
-          <div className="flex flex-col">
-            <h3 className="text-lg font-semibold">
-              {name} {volume}
-            </h3>
-            <p className="text-xl text-gray-800">{price.toLocaleString()}원</p>
+    <>
+      <div className="w-full border p-2 rounded-lg flex relative bg-white hover:shadow-sm">
+        <img
+          src={serviceData.imageUrl || noImage}
+          className="w-32 h-32 object-cover rounded-lg"
+          alt={serviceData.name}
+        />
+        <div className="flex flex-col justify-between flex-grow pl-6">
+          <div className="flex justify-between items-start">
+            <div className="flex flex-col">
+              <h3 className="text-lg font-bold text-gray-900">
+                {serviceData.name}
+              </h3>
+              <p className="text-sm text-gray-500 mb-2">
+                {reversedReservations[reversedReservations.length - 1].date}
+                {" ~ "}
+                {reversedReservations[0].date}
+              </p>
+              <p className="text-xl font-semibold text-gray-800">
+                {serviceData.price.toLocaleString()}원
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setTableModalOpen(true);
+                }}
+                className="px-3 py-1 text-sm font-medium text-white rounded-md bg-blue-400 hover:bg-blue-500"
+              >
+                예약 내용 보기
+              </button>
+              {isManager && (
+                <button className="px-3 py-1 text-sm font-medium text-red-600 border border-red-500 rounded-md hover:bg-red-50">
+                  삭제
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex space-x-2">
-            <button className="text-blue-500 hover:text-blue-700 text-sm">
-              수정
-            </button>
-            <button className="text-red-500 hover:text-red-700 text-sm">
-              삭제
-            </button>
-          </div>
+          <p className="text-gray-600 mt-3 line-clamp-2">
+            {serviceData.description || "설명이 없습니다."}
+          </p>
         </div>
-        <p className="text-gray-600">{description}</p>
       </div>
-    </div>
+      {isTableModalOpen && (
+        <ReserveTable
+          isManager={isManager}
+          reserveInfo={reversedReservations}
+          onClose={() => setTableModalOpen(false)}
+        />
+      )}
+    </>
   );
 }

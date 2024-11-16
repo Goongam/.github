@@ -1,17 +1,34 @@
 import Modal from "../../Util/Modal";
 import BoothRegistInput from "./BoothRegistInput";
-import { MdStorefront } from "react-icons/md";
-import { FaHashtag } from "react-icons/fa";
-import { FaRegImage } from "react-icons/fa6";
-import { FaCalendarCheck } from "react-icons/fa";
-import { MdDriveFileRenameOutline } from "react-icons/md";
-import { FaRegCreditCard } from "react-icons/fa6";
-import { MdOutlineDescription } from "react-icons/md";
-import { SlLocationPin } from "react-icons/sl";
+import {
+  MdStorefront,
+  MdDriveFileRenameOutline,
+  MdOutlineDescription,
+} from "react-icons/md";
+import { FaRegImage, FaCalendarCheck, FaRegCreditCard } from "react-icons/fa";
 import { useState } from "react";
 import { useRegisteBooth } from "../../../Hooks/Booth/useRegistBooth";
 import { useLocation } from "react-router-dom";
 import RegistLocationPage from "./Location/RegistLocationPage";
+import AccountInput from "./Input/AccountInput";
+import ImageInput from "./Input/ImageInput";
+import TimeInput from "./Input/TimeInput";
+import TextareaInput from "./Input/TextareaInput";
+import TagInput from "./Input/TagInput";
+import LocationInput from "./Input/LocationInput";
+import { CiCircleInfo } from "react-icons/ci";
+import InfoBoothRegist from "./InfoBoothRegist";
+
+export const Modal_State = {
+  none: "none",
+  goodsManage: "GM",
+  serviceManage: "SM",
+  goodsInput: "GI",
+  serviceInput: "SI",
+  serviceTime: "ST",
+  locationSelect: "LS",
+  inforMation: "INFO",
+};
 
 export default function BoothRegistPage() {
   const { state } = useLocation();
@@ -29,38 +46,38 @@ export default function BoothRegistPage() {
     setLinkedEvent,
     selectedSeatIds,
     setSelectedSeatIds,
+    setTagNames,
+    tagNames,
+    accountBankName,
+    openTime,
+    endTime,
+    mainImage,
   } = useRegisteBooth(state?.name);
-  const [isOpen, setIsOpen] = useState(false);
-  const [imageName, setImageName] = useState("X");
+  const [modalState, setModalState] = useState(Modal_State.none);
   const [selectedSeatNumbers, setSelectedSeatNumbers] = useState<string[]>([]);
 
   if (!eventId) return <>잘못된 접근입니다.</>;
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files && event.target.files[0];
-    if (selectedFile) {
-      setMainImage(selectedFile);
-      setImageName(selectedFile.name);
-    } else {
-      setMainImage(null);
-      setImageName("X");
-    }
+  const handleBoothSubmission = () => {
+    setLinkedEvent(eventId);
+    mutate();
   };
 
-  function switchModal() {
-    if (!isOpen) {
-      setIsOpen(true);
-    } else {
-      if (window.confirm("저장하시겠습니까?")) {
-        setIsOpen(false);
-      }
-    }
-  }
+  console.log(openTime);
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="flex flex-col w-1/2 my-5 h-full justify-center items-center shadow-md border-b-2 border-r-2 p-5">
+    <div className="flex justify-center items-center min-h-screen ">
+      <div className="flex w-full max-w-screen-sm flex-col my-5 h-full justify-center items-center p-5">
         <h1 className="font-bold text-3xl mb-5">부스 등록</h1>
+        <button
+          onClick={() => {
+            setModalState(Modal_State.inforMation);
+          }}
+          className="flex gap-2 ml-auto border-blue-300 border-2 rounded-md p-1 text-blue-400"
+        >
+          <CiCircleInfo size={25} />
+          부스 등록 방법
+        </button>
         <BoothRegistInput
           placeholder="부스명을 입력해 주세요"
           label="부스명"
@@ -75,95 +92,68 @@ export default function BoothRegistPage() {
           value={boothName}
           type="text"
         />
-        <BoothRegistInput
+        <TimeInput
           label="부스 운영 시간"
           Icon={FaCalendarCheck}
-          setValue={setOpenTime}
-          setValue2={setEndTime}
-          type="time"
+          setStartTime={setOpenTime}
+          endTimeValue={endTime}
+          startTimeValue={openTime}
+          setEndTime={setEndTime}
         />
-        <div className="flex flex-col w-1/2 mb-5">
-          <div className="flex gap-2 items-center h-full mb-2">
-            <SlLocationPin size={25} color="#0064FF" />
-            <label className="font-bold">부스 위치</label>
-          </div>
-          <div className="flex items-center w-full gap-2">
-            <input
-              placeholder="원하는 부스 신청 위치를 선택해주세요"
-              type="text"
-              className="h-10 border-b-2 pl-1 w-3/4"
-              onChange={(e) => {}}
-              value={selectedSeatNumbers.join(", ")}
-            />
-            <button
-              className="h-8 w-1/4 hover:cursor-pointer bg-[#0064FF] rounded-md text-white"
-              onClick={switchModal}
-            >
-              선택
-            </button>
-          </div>
-        </div>
-        <BoothRegistInput
-          placeholder="부스를 대표할 이미지를 선택해주세요"
+        <LocationInput
+          placeholder="부스 신청 위치를 선택해주세요"
+          selectedSeatNumbers={selectedSeatNumbers}
+          setModalState={setModalState}
+        />
+        <ImageInput
           label="부스 대표이미지"
           Icon={FaRegImage}
-          setValue={handleFileChange}
-          type="image"
-          imageName={imageName}
+          setImage={setMainImage}
+          value={mainImage}
         />
-        <BoothRegistInput
-          placeholder="부스를 대한 간단한 설명을 입력해주세요"
+        <TextareaInput
+          placeholder="부스에 대한 간단한 설명을 입력해주세요"
           label="부스 설명"
           Icon={MdOutlineDescription}
           setValue={setDescription}
-          type="textarea"
         />
-        <BoothRegistInput
-          placeholder="부스를 나타내는 태그를 설정해주세요"
-          label="부스 태그"
-          Icon={FaHashtag}
-          setValue={() => {}}
-          type="button"
+        <TagInput
+          placeholder="부스의 태그를 설정한 뒤 확인 버튼을 눌러주세요"
+          tagNames={tagNames}
+          setTagNames={setTagNames}
         />
-        <BoothRegistInput
+        <AccountInput
           placeholder="사용하시는 은행 및 계좌번호를 입력해주세요"
           label="계좌번호"
           Icon={FaRegCreditCard}
-          setValue={setAccountNumber}
-          type="select"
+          setAccountNumber={setAccountNumber}
+          setAccountBankName={setAccountBankName}
         />
-        <div className="flex gap-4 w-full justify-center">
-          <button
-            onClick={switchModal}
-            className="p-1 w-1/4 font-bold h-8 hover:cursor-pointer bg-[#5E1675] rounded-lg text-white mb-4"
-          >
-            물품 등록 및 관리
-          </button>
-          <button
-            onClick={switchModal}
-            className="p-1 w-1/4 font-bold h-8 hover:cursor-pointer bg-[#401F71] rounded-lg text-white mb-4"
-          >
-            서비스(예약) 등록 및 관리
-          </button>
-        </div>
         <button
-          onClick={() => {
-            setLinkedEvent(eventId);
-            mutate();
-          }}
+          onClick={handleBoothSubmission}
           className="py-1 font-bold w-1/3 h-10 hover:cursor-pointer bg-[#0064FF] rounded-md text-white mb-4"
         >
           부스 신청
         </button>
-        <Modal isOpen={isOpen} switchModal={switchModal}>
-          <RegistLocationPage
-            selectedSeatIds={selectedSeatIds}
-            selectedSeatNumbers={selectedSeatNumbers}
-            eventId={eventId}
-            setSelectedSeatIds={setSelectedSeatIds}
-            setSelectedSeatNumbers={setSelectedSeatNumbers}
-          />
-        </Modal>
+        {modalState !== "none" && (
+          <>
+            <Modal width="w-3/4" isOpen={true}>
+              {modalState === Modal_State.locationSelect && (
+                <RegistLocationPage
+                  selectedSeatIds={selectedSeatIds}
+                  selectedSeatNumbers={selectedSeatNumbers}
+                  eventId={eventId}
+                  setSelectedSeatIds={setSelectedSeatIds}
+                  setSelectedSeatNumbers={setSelectedSeatNumbers}
+                  setModalState={setModalState}
+                />
+              )}
+              {modalState === Modal_State.inforMation && (
+                <InfoBoothRegist setModalState={setModalState} />
+              )}
+            </Modal>
+          </>
+        )}
       </div>
     </div>
   );

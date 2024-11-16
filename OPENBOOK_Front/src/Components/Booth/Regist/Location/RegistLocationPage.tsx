@@ -1,6 +1,9 @@
 import "../../../../index.css"; // 사용자 정의 CSS 파일 포함
 import { useGetLocation } from "../../../../Hooks/Event/useGetLocation";
 import LocationStateInfo from "./LocationStateInfo";
+import { useState, useEffect } from "react";
+import { Modal_State } from "../BoothRegistPage";
+import Carousel from "../../../Util/Carousel";
 
 interface Props {
   eventId: string;
@@ -10,29 +13,26 @@ interface Props {
   setSelectedSeatNumbers: (
     numbers: string[] | ((prev: string[]) => string[])
   ) => void;
-}
-
-interface Area {
-  id: number;
-  number: string;
-  status: "EMPTY" | "WAITING" | "COMPLETE";
-}
-
-interface Data {
-  layoutType: "ALPHABET" | "NUMBER";
-  layoutImageUrls: string[];
-  areas: { [key: string]: Area[] };
+  setModalState: (state: string) => void;
 }
 
 export default function RegistLocationPage({
   eventId,
-  setSelectedSeatIds,
-  setSelectedSeatNumbers,
   selectedSeatIds,
   selectedSeatNumbers,
+  setSelectedSeatIds,
+  setSelectedSeatNumbers,
+  setModalState,
 }: Props) {
   const { isLoading, isError, data } = useGetLocation(eventId);
   const maxSelectableSeats = 3;
+  const [tempSeatIds, setTempSeatIds] = useState<number[]>([]);
+  const [tempSeatNumbers, setTempSeatNumbers] = useState<string[]>([]);
+
+  useEffect(() => {
+    setTempSeatIds(selectedSeatIds);
+    setTempSeatNumbers(selectedSeatNumbers);
+  }, [selectedSeatIds, selectedSeatNumbers]);
 
   if (isLoading) {
     return <div>로딩중입니다...</div>;
@@ -45,7 +45,7 @@ export default function RegistLocationPage({
   const getColorClass = (status: "EMPTY" | "WAITING" | "COMPLETE") => {
     switch (status) {
       case "EMPTY":
-        return "bg-yellow-400";
+        return "bg-yellow-400 hover:bg-yellow-500";
       case "WAITING":
         return "bg-red-400";
       case "COMPLETE":
@@ -58,38 +58,52 @@ export default function RegistLocationPage({
   const handleSeatClick = (seatId: number, seatNumber: string, row: string) => {
     const uniqueSeatNumber = `${row}-${seatNumber}`;
 
-    setSelectedSeatIds((prevSelectedSeatIds: number[]) => {
-      if (prevSelectedSeatIds.includes(seatId)) {
-        return prevSelectedSeatIds.filter((id) => id !== seatId);
-      } else if (prevSelectedSeatIds.length < maxSelectableSeats) {
-        return [...prevSelectedSeatIds, seatId];
+    setTempSeatIds((prevTempSeatIds: number[]) => {
+      if (prevTempSeatIds.includes(seatId)) {
+        return prevTempSeatIds.filter((id) => id !== seatId);
+      } else if (prevTempSeatIds.length < maxSelectableSeats) {
+        return [...prevTempSeatIds, seatId];
       } else {
-        alert(`You can select up to ${maxSelectableSeats} seats.`);
-        return prevSelectedSeatIds;
+        alert(`최대 ${maxSelectableSeats}자리까지 선택할 수 있습니다.`);
+        return prevTempSeatIds;
       }
     });
 
-    setSelectedSeatNumbers((prevSelectedSeatNumbers: string[]) => {
-      if (prevSelectedSeatNumbers.includes(uniqueSeatNumber)) {
-        return prevSelectedSeatNumbers.filter(
+    setTempSeatNumbers((prevTempSeatNumbers: string[]) => {
+      if (prevTempSeatNumbers.includes(uniqueSeatNumber)) {
+        return prevTempSeatNumbers.filter(
           (number) => number !== uniqueSeatNumber
         );
-      } else if (prevSelectedSeatNumbers.length < maxSelectableSeats) {
-        return [...prevSelectedSeatNumbers, uniqueSeatNumber];
+      } else if (prevTempSeatNumbers.length < maxSelectableSeats) {
+        return [...prevTempSeatNumbers, uniqueSeatNumber];
       } else {
-        return prevSelectedSeatNumbers;
+        return prevTempSeatNumbers;
       }
     });
   };
 
+  const handleConfirm = () => {
+    setSelectedSeatIds(tempSeatIds);
+    setSelectedSeatNumbers(tempSeatNumbers);
+    setModalState(Modal_State.none);
+  };
+
+  const handleCancel = () => {
+    if (window.confirm("취소하시겠습니까?")) {
+      setTempSeatIds(selectedSeatIds);
+      setTempSeatNumbers(selectedSeatNumbers);
+      setModalState(Modal_State.none);
+    }
+  };
+
   const renderSeats = () => {
-    if (!data) return null;
-    const layoutType = data.layoutType;
+    if (!data) return <>잘못된 접근입니다.</>;
+    const type = data.type;
     const seatRows: JSX.Element[] = [];
 
-    if (layoutType === "ALPHABET") {
+    if (type === "ALPHABET") {
       for (const row in data.areas) {
-        const seatElements: JSX.Element[] = data.areas[row].map((area) => {
+        const seatElements: JSX.Element[] = data.areas[row].map((area: any) => {
           const seatNumber = `${row}${area.number}`;
           return (
             <div
@@ -97,12 +111,10 @@ export default function RegistLocationPage({
               className={`w-16 h-16 ${getColorClass(
                 area.status
               )} m-1 flex items-center justify-center text-center text-sm font-mono ${
-                selectedSeatIds.includes(area.id)
-                  ? "border-4 border-blue-500"
-                  : ""
-              } ${area.status !== "COMPLETE" ? "cursor-pointer" : ""}`}
+                tempSeatIds.includes(area.id) ? "border-4 border-blue-500" : ""
+              } ${area.status === "EMPTY" ? "cursor-pointer" : ""}`}
               onClick={() =>
-                area.status !== "COMPLETE" &&
+                area.status === "EMPTY" &&
                 handleSeatClick(area.id, seatNumber, row)
               }
             >
@@ -116,12 +128,12 @@ export default function RegistLocationPage({
           </div>
         );
       }
-    } else if (layoutType === "NUMBER") {
+    } else if (type === "NUMBER") {
       let rowCount = 0;
       let seatElements: JSX.Element[] = [];
 
       for (const row in data.areas) {
-        data.areas[row].forEach((area) => {
+        data.areas[row].forEach((area: any) => {
           const seatNumber = area.number;
           seatElements.push(
             <div
@@ -129,12 +141,10 @@ export default function RegistLocationPage({
               className={`w-16 h-16 ${getColorClass(
                 area.status
               )} m-1 flex items-center justify-center text-center text-sm font-mono ${
-                selectedSeatIds.includes(area.id)
-                  ? "border-4 border-blue-500"
-                  : ""
-              } ${area.status !== "COMPLETE" ? "cursor-pointer" : ""}`}
+                tempSeatIds.includes(area.id) ? "border-4 border-blue-500" : ""
+              } ${area.status === "EMPTY" ? "cursor-pointer" : ""}`}
               onClick={() =>
-                area.status !== "COMPLETE" &&
+                area.status === "EMPTY" &&
                 handleSeatClick(area.id, seatNumber, row)
               }
             >
@@ -168,14 +178,21 @@ export default function RegistLocationPage({
 
   return data ? (
     <>
-      <div className="flex w-full gap-4 h-full">
+      <div className="flex w-full gap-4 h-full pt-5">
         <div className="w-1/2 gap-4 py-5 flex flex-col h-[500px] items-center bg-blue-100 rounded-lg ">
           <div className="text-3xl font-bold">행사장 구조도</div>
-          <div className="flex justify-center items-center w-full h-3/4">
-            <img
-              src={data.layoutImageUrls[0]}
-              alt="Event Venue"
-              className="w-full h-full object-contain px-5 pb-10 rounded mt-3"
+          <div className="flex flex-col justify-center items-center w-full h-3/4">
+            <Carousel
+              className="h-[350px]"
+              list={JSON.parse(data.imageUrl).map((url: string) => (
+                <img
+                  className="w-full h-full object-contain px-5 pb-10 rounded mt-5"
+                  src={url}
+                  alt="layout"
+                />
+              ))}
+              dot={JSON.parse(data.imageUrl).length !== 1}
+              button={false}
             />
           </div>
         </div>
@@ -190,6 +207,20 @@ export default function RegistLocationPage({
         <LocationStateInfo color="yellow-400" state={"비어있음"} />
         <LocationStateInfo color="red-400" state={"예약됨"} />
         <LocationStateInfo color="gray-400" state={"승인됨"} />
+      </div>
+      <div className="flex justify-center gap-4 mt-4 w-full">
+        <button
+          onClick={handleConfirm}
+          className="w-1/4 bg-blue-500 text-white py-2 rounded"
+        >
+          확인
+        </button>
+        <button
+          onClick={handleCancel}
+          className="w-1/4 bg-red-500 text-white py-2 rounded"
+        >
+          취소
+        </button>
       </div>
     </>
   ) : (

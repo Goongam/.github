@@ -4,11 +4,31 @@ import { getAccessToken } from "../../Api/Util/token";
 interface BoothData {
   id: number;
   name: string;
-  openTime: string;
-  closeTime: string;
+  openData: string;
+  closeData: string;
   location: LocationData[];
   description: string;
   mainImageUrl: string;
+  tags: { id: string; name: string }[];
+  eventId: number;
+  eventName: string;
+  event: {
+    id: string;
+    name: string;
+    manager: {
+      id: string;
+      nickname: string;
+      role: string;
+    };
+  };
+  isUserManager: boolean;
+  manager: {
+    id: string;
+    nickname: string;
+    role: string;
+  };
+  accountNumber: string;
+  accountBankName: string;
 }
 
 export interface LocationData {
@@ -17,12 +37,8 @@ export interface LocationData {
 }
 
 const fetchBoothData = (boothId: string): Promise<BoothData> => {
-  const token = getAccessToken();
   const response = fetch(`http://52.79.91.214:8080/booths/${boothId}`, {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   }).then((response) => {
     if (!response.ok) throw new Error("err");
     return response.json();
